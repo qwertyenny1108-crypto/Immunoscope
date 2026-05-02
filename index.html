@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ImmunoScope — Daily Immunology Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e14;
+    --surface: #111620;
+    --surface2: #161d2a;
+    --border: rgba(255,255,255,0.07);
+    --border-h: rgba(255,255,255,0.14);
+    --text: #e8edf5;
+    --text2: #8a96a8;
+    --text3: #4d5566;
+    --accent: #00d4aa;
+    --accent-d: rgba(0,212,170,0.12);
+    --accent-d2: rgba(0,212,170,0.06);
+    --blue: #4a9eff;
+    --blue-d: rgba(74,158,255,0.12);
+    --purple: #a78bfa;
+    --purple-d: rgba(167,139,250,0.12);
+    --amber: #fbbf24;
+    --amber-d: rgba(251,191,36,0.12);
+    --red: #f87171;
+    --red-d: rgba(248,113,113,0.10);
+    --pink: #f472b6;
+    --pink-d: rgba(244,114,182,0.10);
+    --coral: #fb923c;
+    --coral-d: rgba(251,146,60,0.10);
+    --mono: 'DM Mono', monospace;
+    --serif: 'DM Serif Display', serif;
+    --sans: 'Outfit', sans-serif;
+    --r: 8px;
+    --rl: 12px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,170,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,170,0.025) 1px, transparent 1px);
+    background-size: 56px 56px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0;
+    width: 230px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    z-index: 200;
+    transition: transform 0.25s;
+  }
+  .sb-logo { padding: 22px 18px 16px; border-bottom: 1px solid var(--border); }
+  .sb-logo-name { font-family: var(--serif); font-size: 19px; color: var(--accent); }
+  .sb-logo-sub { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 3px; }
+  .sb-date { padding: 10px 18px; border-bottom: 1px solid var(--border); font-size: 11px; color: var(--text3); font-family: var(--mono); }
+  .sb-nav { flex: 1; overflow-y: auto; padding: 10px 0; }
+  .sb-section { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 0.13em; text-transform: uppercase; padding: 10px 18px 4px; }
+  .sb-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 18px; cursor: pointer;
+    border-left: 2px solid transparent;
+    font-size: 13px; color: var(--text2);
+    transition: all 0.14s;
+  }
+  .sb-item:hover { background: var(--accent-d2); color: var(--text); border-left-color: rgba(0,212,170,0.25); }
+  .sb-item.active { background: var(--accent-d); color: var(--accent); border-left-color: var(--accent); }
+  .sb-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .sb-footer { padding: 14px 18px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text3); line-height: 1.5; }
+
+  /* ── MAIN ── */
+  #main {
+    margin-left: 230px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+  }
+  .topbar {
+    position: sticky; top: 0;
+    background: rgba(10,14,20,0.88);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+    padding: 13px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    z-index: 100;
+  }
+  .topbar-title { font-size: 14px; font-weight: 500; }
+  .live { display: flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 11px; color: var(--text2); }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+  /* ── PAGES ── */
+  .page { display: none; padding: 36px 32px; animation: fadein 0.22s ease; }
+  .page.active { display: block; }
+  @keyframes fadein { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:none} }
+
+  /* ── API KEY MODAL ── */
+  #apiModal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 500;
+    backdrop-filter: blur(6px);
+  }
+  #apiModal.hidden { display: none; }
+  .modal-box {
+    background: var(--surface);
+    border: 1px solid var(--border-h);
+    border-radius: 14px;
+    padding: 32px;
+    width: 420px;
+    max-width: 92vw;
+  }
+  .modal-logo { font-family: var(--serif); font-size: 22px; color: var(--accent); margin-bottom: 6px; }
+  .modal-sub { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 22px; }
+  .modal-label { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 7px; }
+  .modal-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border-h);
+    border-radius: var(--r);
+    padding: 10px 14px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    margin-bottom: 8px;
+    transition: border-color 0.15s;
+  }
+  .modal-input:focus { border-color: var(--accent); }
+  .modal-hint { font-size: 11px; color: var(--text3); margin-bottom: 18px; line-height: 1.5; }
+  .modal-hint a { color: var(--accent); text-decoration: none; }
+  .modal-btn {
+    width: 100%; padding: 11px;
+    background: var(--accent); color: #0a0e14;
+    border: none; border-radius: var(--r);
+    font-family: var(--sans); font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  .modal-btn:hover { opacity: 0.88; }
+  .modal-err { font-size: 12px; color: var(--red); margin-top: 8px; display: none; }
+
+  /* ── HOME ── */
+  .hero { margin-bottom: 36px; }
+  .hero-eyebrow { font-family: var(--mono); font-size: 10px; color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 10px; }
+  .hero-h { font-family: var(--serif); font-size: 42px; line-height: 1.1; margin-bottom: 12px; }
+  .hero-h em { color: var(--accent); font-style: italic; }
+  .hero-sub { font-size: 15px; color: var(--text2); line-height: 1.65; max-width: 500px; }
+  .hero-key-info { margin-top: 14px; display: flex; align-items: center; gap: 10px; }
+  .key-badge { font-family: var(--mono); font-size: 10px; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border-h); color: var(--text2); }
+  .key-badge.has-key { border-color: rgba(0,212,170,0.4); color: var(--accent); background: var(--accent-d); }
+  .change-key { font-size: 11px; color: var(--text3); cursor: pointer; text-decoration: underline; }
+  .change-key:hover { color: var(--text2); }
+
+  .full-btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    margin: 24px 0;
+    background: var(--accent); color: #0a0e14;
+    font-family: var(--sans); font-size: 14px; font-weight: 600;
+    padding: 12px 28px; border-radius: var(--r); border: none;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .full-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .full-btn:active { transform: scale(0.98); }
+
+  .grid-lbl { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 0.13em; text-transform: uppercase; margin-bottom: 14px; }
+  .topic-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .tc {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--rl); padding: 20px;
+    cursor: pointer; transition: all 0.18s; position: relative; overflow: hidden;
+  }
+  .tc::before { content:''; position:absolute; inset:0; opacity:0; transition:opacity 0.2s; }
+  .tc:hover { border-color: var(--border-h); transform: translateY(-2px); }
+  .tc:hover::before { opacity: 1; }
+  .tc-cancer::before  { background: radial-gradient(circle at 25% 25%, rgba(248,113,113,0.07), transparent 65%); }
+  .tc-auto::before    { background: radial-gradient(circle at 25% 25%, rgba(167,139,250,0.07), transparent 65%); }
+  .tc-vax::before     { background: radial-gradient(circle at 25% 25%, rgba(0,212,170,0.07), transparent 65%); }
+  .tc-innate::before  { background: radial-gradient(circle at 25% 25%, rgba(74,158,255,0.07), transparent 65%); }
+  .tc-adapt::before   { background: radial-gradient(circle at 25% 25%, rgba(251,191,36,0.07), transparent 65%); }
+  .tc-cyto::before    { background: radial-gradient(circle at 25% 25%, rgba(244,114,182,0.07), transparent 65%); }
+  .tc-icon { font-size: 22px; margin-bottom: 10px; display: block; }
+  .tc-name { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+  .tc-desc { font-size: 12px; color: var(--text2); line-height: 1.5; }
+  .tc-tag { display: inline-block; margin-top: 10px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.07em; padding: 3px 8px; border-radius: 3px; }
+  .t-red    { background: var(--red-d);    color: var(--red); }
+  .t-purple { background: var(--purple-d); color: var(--purple); }
+  .t-teal   { background: var(--accent-d); color: var(--accent); }
+  .t-blue   { background: var(--blue-d);   color: var(--blue); }
+  .t-amber  { background: var(--amber-d);  color: var(--amber); }
+  .t-pink   { background: var(--pink-d);   color: var(--pink); }
+
+  /* ── RESULT ── */
+  .res-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; gap: 12px; }
+  .res-title { font-family: var(--serif); font-size: 30px; line-height: 1.2; }
+  .res-meta { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 6px; }
+  .back-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text2); font-size: 12px;
+    padding: 8px 16px; border-radius: var(--r); cursor: pointer;
+    transition: all 0.14s; white-space: nowrap; flex-shrink: 0;
+    font-family: var(--sans);
+  }
+  .back-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--border-h); }
+
+  /* loading */
+  .loading { text-align: center; padding: 80px 20px; display: none; }
+  .loading.on { display: block; }
+  .spin {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    animation: spin 0.75s linear infinite; margin: 0 auto 18px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-lbl { font-family: var(--mono); font-size: 12px; color: var(--text2); }
+  .loading-steps { margin-top: 12px; display: flex; flex-direction: column; gap: 5px; }
+  .ls { font-size: 12px; color: var(--text3); transition: color 0.3s; }
+  .ls.active { color: var(--text2); }
+  .ls.done { color: var(--accent); }
+
+  /* result cards */
+  .overview-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 0; padding: 18px 22px; margin-bottom: 18px;
+  }
+  .ov-lbl { font-family: var(--mono); font-size: 9px; color: var(--accent); letter-spacing: 0.13em; text-transform: uppercase; margin-bottom: 7px; }
+  .ov-txt { font-size: 14px; color: var(--text2); line-height: 1.75; }
+
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 22px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; text-align: center; }
+  .stat-n { font-family: var(--serif); font-size: 26px; color: var(--text); }
+  .stat-l { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+  .findings-lbl { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 0.13em; text-transform: uppercase; margin-bottom: 12px; }
+  .findings { display: flex; flex-direction: column; gap: 12px; margin-bottom: 22px; }
+  .finding {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--rl); padding: 18px 20px; transition: border-color 0.14s;
+  }
+  .finding:hover { border-color: var(--border-h); }
+  .f-num { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 0.09em; margin-bottom: 9px; }
+  .f-top { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 9px; }
+  .f-ico { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .fi-a { background: var(--accent-d); }
+  .fi-b { background: var(--purple-d); }
+  .fi-c { background: var(--blue-d); }
+  .fi-d { background: var(--amber-d); }
+  .fi-e { background: var(--pink-d); }
+  .fi-f { background: var(--red-d); }
+  .f-title { font-size: 14px; font-weight: 500; line-height: 1.4; }
+  .f-source { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 3px; }
+  .f-body { font-size: 13px; color: var(--text2); line-height: 1.7; margin-bottom: 10px; }
+  .f-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 4px; border: 1px solid var(--border); color: var(--text3); }
+  .chip-hi { background: var(--accent-d); color: var(--accent); border-color: rgba(0,212,170,0.25); }
+
+  .outlook-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-left: 3px solid var(--purple);
+    border-radius: 0; padding: 18px 22px;
+  }
+  .ol-lbl { font-family: var(--mono); font-size: 9px; color: var(--purple); letter-spacing: 0.13em; text-transform: uppercase; margin-bottom: 7px; }
+  .ol-txt { font-size: 13px; color: var(--text2); line-height: 1.75; }
+
+  /* error */
+  .err-box {
+    background: var(--red-d); border: 1px solid rgba(248,113,113,0.2);
+    border-radius: var(--r); padding: 14px 18px;
+    font-size: 13px; color: var(--red); display: none; margin-bottom: 18px;
+  }
+  .err-box.on { display: block; }
+
+  /* history */
+  .hist-empty { font-size: 14px; color: var(--text3); text-align: center; padding: 60px 0; }
+  .hist-grid { display: flex; flex-direction: column; gap: 10px; }
+  .hist-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 14px 18px;
+    display: flex; align-items: center; gap: 14px; cursor: pointer; transition: all 0.14s;
+  }
+  .hist-item:hover { border-color: var(--border-h); background: var(--surface2); }
+  .hi-icon { font-size: 20px; }
+  .hi-body { flex: 1; }
+  .hi-title { font-size: 13px; font-weight: 500; }
+  .hi-date { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 3px; }
+  .hi-arrow { color: var(--text3); font-size: 18px; }
+
+  /* about */
+  .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  .about-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); padding: 20px; }
+  .about-card h3 { font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+  .about-card p { font-size: 13px; color: var(--text2); line-height: 1.65; }
+  .about-card a { color: var(--accent); text-decoration: none; }
+
+  /* page heading */
+  .page-h { font-family: var(--serif); font-size: 30px; margin-bottom: 8px; }
+  .page-sh { font-size: 14px; color: var(--text2); }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  @media (max-width: 900px) {
+    #sidebar { transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
+    #main { margin-left: 0; }
+    .topic-grid { grid-template-columns: 1fr 1fr; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .about-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .topic-grid { grid-template-columns: 1fr; }
+    .page { padding: 24px 16px; }
+    .topbar { padding: 12px 16px; }
+    .hero-h { font-size: 30px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- API KEY MODAL -->
+<div id="apiModal">
+  <div class="modal-box">
+    <div class="modal-logo">ImmunoScope</div>
+    <div class="modal-sub">Enter your Anthropic API key to power AI-driven immunology research briefs. Your key is stored locally in your browser only.</div>
+    <div class="modal-label">Anthropic API Key</div>
+    <input class="modal-input" type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." autocomplete="off">
+    <div class="modal-hint">
+      Get your free API key at <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>. Your key never leaves your browser.
+    </div>
+    <button class="modal-btn" onclick="saveKey()">Start Using ImmunoScope →</button>
+    <div class="modal-err" id="modalErr">Please enter a valid API key (starts with sk-ant-)</div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-name">ImmunoScope</div>
+    <div class="sb-logo-sub">Daily Research Intelligence</div>
+  </div>
+  <div class="sb-date" id="sbDate"></div>
+  <nav class="sb-nav">
+    <div class="sb-section">Pages</div>
+    <div class="sb-item active" onclick="showPage('home')" id="nav-home">
+      <div class="sb-dot" style="background:var(--accent)"></div> Home
+    </div>
+    <div class="sb-item" onclick="showPage('history')" id="nav-history">
+      <div class="sb-dot" style="background:#888"></div> History
+    </div>
+    <div class="sb-item" onclick="showPage('about')" id="nav-about">
+      <div class="sb-dot" style="background:#888"></div> About
+    </div>
+    <div class="sb-section" style="margin-top:14px;">Quick Launch</div>
+    <div class="sb-item" onclick="launch('all')"><div class="sb-dot" style="background:var(--accent)"></div> Full Daily Brief</div>
+    <div class="sb-item" onclick="launch('cancer')"><div class="sb-dot" style="background:var(--red)"></div> Cancer Immunotherapy</div>
+    <div class="sb-item" onclick="launch('autoimmune')"><div class="sb-dot" style="background:var(--purple)"></div> Autoimmune</div>
+    <div class="sb-item" onclick="launch('vaccine')"><div class="sb-dot" style="background:var(--accent)"></div> Vaccines</div>
+    <div class="sb-item" onclick="launch('innate')"><div class="sb-dot" style="background:var(--blue)"></div> Innate Immunity</div>
+    <div class="sb-item" onclick="launch('adaptive')"><div class="sb-dot" style="background:var(--amber)"></div> Adaptive Immunity</div>
+    <div class="sb-item" onclick="launch('cytokine')"><div class="sb-dot" style="background:var(--pink)"></div> Cytokines</div>
+  </nav>
+  <div class="sb-footer">AI-powered · Real-time web search · For research reference only</div>
+</aside>
+
+<!-- MAIN -->
+<main id="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbarTitle">Home</div>
+    <div class="live"><div class="live-dot"></div> Claude AI · Live Search</div>
+  </div>
+
+  <!-- HOME -->
+  <div class="page active" id="page-home">
+    <div class="hero">
+      <div class="hero-eyebrow">Immunology Intelligence Platform</div>
+      <h1 class="hero-h">Your daily<br><em>immune system</em><br>research digest</h1>
+      <p class="hero-sub">AI searches the latest journals and news — pick any topic for an instant, structured brief.</p>
+      <div class="hero-key-info">
+        <div class="key-badge" id="keyBadge">No API key</div>
+        <span class="change-key" onclick="showApiModal()">Change key</span>
+      </div>
+    </div>
+
+    <button class="full-btn" onclick="launch('all')">✦ Get Today's Full Brief</button>
+
+    <div class="grid-lbl">Browse by topic</div>
+    <div class="topic-grid">
+      <div class="tc tc-cancer" onclick="launch('cancer')">
+        <span class="tc-icon">🔬</span>
+        <div class="tc-name">Cancer Immunotherapy</div>
+        <div class="tc-desc">CAR-T, checkpoint inhibitors, tumor microenvironment, cancer vaccines</div>
+        <span class="tc-tag t-red">Oncology</span>
+      </div>
+      <div class="tc tc-auto" onclick="launch('autoimmune')">
+        <span class="tc-icon">⚡</span>
+        <div class="tc-name">Autoimmune Disease</div>
+        <div class="tc-desc">RA, lupus, MS, Crohn's, Treg dysfunction, JAK inhibitors</div>
+        <span class="tc-tag t-purple">Autoimmunity</span>
+      </div>
+      <div class="tc tc-vax" onclick="launch('vaccine')">
+        <span class="tc-icon">💉</span>
+        <div class="tc-name">Vaccine Immunology</div>
+        <div class="tc-desc">mRNA platforms, adjuvants, mucosal immunity, germinal centers</div>
+        <span class="tc-tag t-teal">Vaccinology</span>
+      </div>
+      <div class="tc tc-innate" onclick="launch('innate')">
+        <span class="tc-icon">🛡️</span>
+        <div class="tc-name">Innate Immunity</div>
+        <div class="tc-desc">Macrophages, NK cells, complement, TLRs, cGAS-STING, inflammasomes</div>
+        <span class="tc-tag t-blue">Innate</span>
+      </div>
+      <div class="tc tc-adapt" onclick="launch('adaptive')">
+        <span class="tc-icon">🎯</span>
+        <div class="tc-name">Adaptive Immunity</div>
+        <div class="tc-desc">T cell differentiation, B cells, antibody responses, memory formation</div>
+        <span class="tc-tag t-amber">Adaptive</span>
+      </div>
+      <div class="tc tc-cyto" onclick="launch('cytokine')">
+        <span class="tc-icon">🔗</span>
+        <div class="tc-name">Cytokines & Signaling</div>
+        <div class="tc-desc">Interleukins, interferons, TNF, JAK-STAT, cytokine storms</div>
+        <span class="tc-tag t-pink">Signaling</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="page" id="page-result">
+    <div class="res-header">
+      <div>
+        <div class="res-title" id="resTitle">Brief</div>
+        <div class="res-meta" id="resMeta"></div>
+      </div>
+      <button class="back-btn" onclick="showPage('home')">← Back</button>
+    </div>
+    <div class="err-box" id="errBox"></div>
+    <div class="loading" id="loading">
+      <div class="spin"></div>
+      <div class="loading-lbl">AI is searching the web...</div>
+      <div class="loading-steps">
+        <div class="ls" id="ls1">⟳ Querying latest research</div>
+        <div class="ls" id="ls2">⟳ Synthesizing key findings</div>
+        <div class="ls" id="ls3">⟳ Generating digest</div>
+      </div>
+    </div>
+    <div id="resContent"></div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="page" id="page-history">
+    <div class="page-h">History</div>
+    <div class="page-sh" style="margin-bottom:24px;">Your previously generated briefs, saved in this browser session.</div>
+    <div id="histContent"><div class="hist-empty">No history yet — generate your first brief from the Home page.</div></div>
+  </div>
+
+  <!-- ABOUT -->
+  <div class="page" id="page-about">
+    <div class="page-h">About ImmunoScope</div>
+    <div class="page-sh">An AI-powered immunology research intelligence tool for researchers, clinicians, and students.</div>
+    <div class="about-grid">
+      <div class="about-card">
+        <h3>🔍 How it works</h3>
+        <p>Each topic triggers a Claude AI web search across recent journals, preprints, and science news. The AI synthesizes findings into structured, readable briefs with citations.</p>
+      </div>
+      <div class="about-card">
+        <h3>🔑 Your API key</h3>
+        <p>Your Anthropic API key is stored only in your browser's localStorage. It never leaves your device. Get a key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>.</p>
+      </div>
+      <div class="about-card">
+        <h3>📚 Coverage areas</h3>
+        <p>Cancer immunotherapy, autoimmune diseases, vaccine science, innate &amp; adaptive immunity, cytokine biology, and immune signaling pathways.</p>
+      </div>
+      <div class="about-card">
+        <h3>⚠️ Disclaimer</h3>
+        <p>AI-generated summaries are for research reference only. Always verify against original publications before clinical or research application.</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+// ── DATE ──
+const today = new Date();
+const dateStr = today.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+const dateShort = today.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+document.getElementById('sbDate').textContent = dateStr;
+
+// ── API KEY ──
+let API_KEY = localStorage.getItem('immuno_api_key') || '';
+
+function updateKeyBadge() {
+  const badge = document.getElementById('keyBadge');
+  if (API_KEY) {
+    badge.textContent = 'API key: ' + API_KEY.slice(0,10) + '...';
+    badge.className = 'key-badge has-key';
+  } else {
+    badge.textContent = 'No API key set';
+    badge.className = 'key-badge';
+  }
+}
+
+function showApiModal() {
+  document.getElementById('apiModal').classList.remove('hidden');
+  document.getElementById('apiKeyInput').value = API_KEY;
+}
+
+function saveKey() {
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if (!val.startsWith('sk-ant-') && !val.startsWith('sk-')) {
+    document.getElementById('modalErr').style.display = 'block';
+    return;
+  }
+  API_KEY = val;
+  localStorage.setItem('immuno_api_key', val);
+  document.getElementById('apiModal').classList.add('hidden');
+  document.getElementById('modalErr').style.display = 'none';
+  updateKeyBadge();
+}
+
+document.getElementById('apiKeyInput').addEventListener('keydown', e => { if (e.key === 'Enter') saveKey(); });
+
+if (!API_KEY) {
+  document.getElementById('apiModal').classList.remove('hidden');
+} else {
+  document.getElementById('apiModal').classList.add('hidden');
+}
+updateKeyBadge();
+
+// ── TOPICS ──
+const ICONS = ['fi-a','fi-b','fi-c','fi-d','fi-e','fi-f'];
+const TOPIC_ICONS = { all:'✦', cancer:'🔬', autoimmune:'⚡', vaccine:'💉', innate:'🛡️', adaptive:'🎯', cytokine:'🔗' };
+const TOPICS = {
+  all:       { label:'Full Daily Immunology Brief',        prompt:'Search for the most important immunology research breakthroughs from the past 7 days across all areas — innate immunity, adaptive immunity, cancer immunotherapy (CAR-T, checkpoint inhibitors), autoimmune diseases, vaccines, cytokines. Return ONLY valid JSON, no markdown, no backticks: {"overview":"2-3 sentence English summary","stats":{"breakthroughs":5,"areas":4,"clinical":"High"},"findings":[{"title":"concise English title ≤10 words","source":"Journal or Institution, approx date","icon":"🧬","body":"3 sentences: mechanism, significance, implication","tags":["tag1","tag2"],"impact":"High"}],"outlook":"2-sentence English forward-looking comment"} Include 5-6 findings.' },
+  cancer:    { label:'Cancer Immunotherapy Brief',          prompt:'Search for the most recent cancer immunotherapy breakthroughs from the past 7-14 days — CAR-T cells, checkpoint inhibitors, tumor microenvironment, bispecific antibodies, cancer vaccines, adoptive cell therapy. Return ONLY valid JSON, no markdown, no backticks: {"overview":"2-3 sentence English summary","stats":{"breakthroughs":5,"areas":3,"clinical":"High"},"findings":[{"title":"concise English title ≤10 words","source":"Journal or Institution, approx date","icon":"🔬","body":"3 sentences: mechanism, significance, implication","tags":["tag1","tag2"],"impact":"High"}],"outlook":"2-sentence English forward-looking comment"} Include 5 findings.' },
+  autoimmune:{ label:'Autoimmune Disease Brief',            prompt:'Search for the most recent autoimmune disease research breakthroughs from the past 7-14 days — rheumatoid arthritis, lupus, MS, IBD, Treg dysfunction, JAK inhibitors, biologics. Return ONLY valid JSON, no markdown, no backticks: {"overview":"2-3 sentence English summary","stats":{"breakthroughs":5,"areas":3,"clinical":"High"},"findings":[{"title":"concise English title ≤10 words","source":"Journal or Institution, approx date","icon":"⚡","body":"3 sentences: mechanism, significance, implication","tags":["tag1","tag2"],"impact":"High"}],"outlook":"2-sentence English forward-looking comment"} Include 5 findings.' },
+  vaccine:   { label:'Vaccine Immunology Brief',            prompt:'Search for the most recent vaccine immunology breakthroughs from the past 7-14 days — mRNA vaccines, adjuvants, mucosal immunity, germinal centers, universal vaccines, novel delivery platforms. Return ONLY valid JSON, no markdown, no backticks: {"overview":"2-3 sentence English summary","stats":{"breakthroughs":4,"areas":3,"clinical":"Moderate"},"findings":[{"title":"concise English title ≤10 words","source":"Journal or Institution, approx date","icon":"💉","body":"3 sentences: mechanism, significance, implication","tags":["tag1","tag2"],"impact":"High"}],"outlook":"2-sentence English forward-looking comment"} Include 4-5 findings.' },
+  innate:    { label:'Innate Immunity Brief',               prompt:'Search for the most recent innate immunity research breakthroughs from the past 7-14 days — macrophages, NK cells, dendritic cells, complement, TLRs, cGAS-STING, trained immunity, inflammasomes, type I interferons. Return ONLY valid JSON, no markdown, no backticks: {"overview":"2-3 sentence English summary","stats":{"breakthroughs":4,"areas":3,"clinical":"Moderate"},"findings":[{"title":"concise English title ≤10 words","source":"Journal or Institution, approx date","icon":"🛡️","body":"3 sentences: mechanism, significance, implication","tags":["tag1","tag2"],"impact":"High"}],"outlook":"2-sentence English forward-looking comment"} Include 4-5 findings.' },
+  adaptive:  { label:'Adaptive Immunity Brief',             prompt:'Search for the most recent adaptive immunity research breakthroughs from the past 7-14 days — T cell differentiation, B cell biology, antibody responses, immune memory, TCR signaling, germinal centers, Tfh cells, Tregs, T cell exhaustion. Return ONLY valid JSON, no markdown, no backticks: {"overview":"2-3 sentence English summary","stats":{"breakthroughs":4,"areas":3,"clinical":"Moderate"},"findings":[{"title":"concise English title ≤10 words","source":"Journal or Institution, approx date","icon":"🎯","body":"3 sentences: mechanism, significance, implication","tags":["tag1","tag2"],"impact":"High"}],"outlook":"2-sentence English forward-looking comment"} Include 4-5 findings.' },
+  cytokine:  { label:'Cytokines & Immune Signaling Brief',  prompt:'Search for the most recent cytokine and immune signaling research breakthroughs from the past 7-14 days — interleukins, interferons, TNF, JAK-STAT, NF-κB, cytokine storms, immunometabolism. Return ONLY valid JSON, no markdown, no backticks: {"overview":"2-3 sentence English summary","stats":{"breakthroughs":4,"areas":3,"clinical":"Moderate"},"findings":[{"title":"concise English title ≤10 words","source":"Journal or Institution, approx date","icon":"🔗","body":"3 sentences: mechanism, significance, implication","tags":["tag1","tag2"],"impact":"High"}],"outlook":"2-sentence English forward-looking comment"} Include 4-5 findings.' }
+};
+
+// ── HISTORY ──
+const history = [];
+function renderHistory() {
+  const el = document.getElementById('histContent');
+  if (!history.length) { el.innerHTML = '<div class="hist-empty">No history yet — generate your first brief from the Home page.</div>'; return; }
+  el.innerHTML = '<div class="hist-grid">' + history.map((h,i) => `
+    <div class="hist-item" onclick="showStored(${i})">
+      <div class="hi-icon">${TOPIC_ICONS[h.key]}</div>
+      <div class="hi-body"><div class="hi-title">${TOPICS[h.key].label}</div><div class="hi-date">${h.date}</div></div>
+      <div class="hi-arrow">›</div>
+    </div>`).join('') + '</div>';
+}
+function showStored(i) {
+  const h = history[i];
+  showPage('result');
+  document.getElementById('resTitle').textContent = TOPICS[h.key].label;
+  document.getElementById('resMeta').textContent = 'Generated ' + h.date;
+  document.getElementById('errBox').className = 'err-box';
+  document.getElementById('loading').className = 'loading';
+  renderResult(h.data, h.key);
+}
+
+// ── NAV ──
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  const titles = { home:'Home', result:'Brief', history:'History', about:'About' };
+  document.getElementById('topbarTitle').textContent = titles[id] || id;
+  document.querySelectorAll('.sb-item[id^="nav-"]').forEach(n => n.classList.remove('active'));
+  const navEl = document.getElementById('nav-' + id);
+  if (navEl) navEl.classList.add('active');
+}
+
+// ── RENDER ──
+function renderResult(data, key) {
+  const f = data.findings || [];
+  const st = data.stats || {};
+  document.getElementById('resContent').innerHTML = `
+    <div class="overview-card">
+      <div class="ov-lbl">Overview</div>
+      <div class="ov-txt">${data.overview || ''}</div>
+    </div>
+    <div class="stats-row">
+      <div class="stat"><div class="stat-n">${st.breakthroughs || f.length}</div><div class="stat-l">Key findings</div></div>
+      <div class="stat"><div class="stat-n">${st.areas || '—'}</div><div class="stat-l">Sub-areas</div></div>
+      <div class="stat"><div class="stat-n">${st.clinical || '—'}</div><div class="stat-l">Clinical relevance</div></div>
+      <div class="stat"><div class="stat-n">${dateShort}</div><div class="stat-l">Generated</div></div>
+    </div>
+    <div class="findings-lbl">Key Findings</div>
+    <div class="findings">
+      ${f.map((fi,i) => `
+        <div class="finding">
+          <div class="f-num">Finding ${String(i+1).padStart(2,'0')} · ${(fi.tags||[])[0]||''}</div>
+          <div class="f-top">
+            <div class="f-ico ${ICONS[i % ICONS.length]}">${fi.icon || TOPIC_ICONS[key]}</div>
+            <div><div class="f-title">${fi.title}</div><div class="f-source">${fi.source||''}</div></div>
+          </div>
+          <div class="f-body">${fi.body}</div>
+          <div class="f-tags">
+            ${fi.impact==='High'?'<span class="chip chip-hi">High impact</span>':''}
+            ${(fi.tags||[]).map(t=>`<span class="chip">${t}</span>`).join('')}
+          </div>
+        </div>`).join('')}
+    </div>
+    <div class="outlook-card">
+      <div class="ol-lbl">Research Outlook</div>
+      <div class="ol-txt">${data.outlook||''}</div>
+    </div>`;
+}
+
+// ── LAUNCH ──
+async function launch(key) {
+  if (!API_KEY) { showApiModal(); return; }
+  const t = TOPICS[key];
+  showPage('result');
+  document.getElementById('resTitle').textContent = t.label;
+  document.getElementById('resMeta').textContent = 'Generated ' + dateStr;
+  document.getElementById('errBox').className = 'err-box';
+  document.getElementById('resContent').innerHTML = '';
+  document.getElementById('loading').className = 'loading on';
+
+  const steps = ['ls1','ls2','ls3'];
+  let si = 0;
+  const iv = setInterval(() => {
+    if (si > 0) { document.getElementById(steps[si-1]).className = 'ls done'; }
+    if (si < steps.length) { document.getElementById(steps[si]).className = 'ls active'; si++; }
+    else clearInterval(iv);
+  }, 1400);
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: t.prompt }]
+      })
+    });
+
+    clearInterval(iv);
+    document.getElementById('loading').className = 'loading';
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || 'HTTP ' + res.status);
+    }
+
+    const raw = await res.json();
+    let text = (raw.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    const s = text.indexOf('{'), e = text.lastIndexOf('}');
+    if (s === -1) throw new Error('No JSON found in response');
+    const parsed = JSON.parse(text.slice(s, e + 1));
+
+    renderResult(parsed, key);
+    history.unshift({ key, date: dateStr, data: parsed });
+    renderHistory();
+
+  } catch (err) {
+    clearInterval(iv);
+    document.getElementById('loading').className = 'loading';
+    const box = document.getElementById('errBox');
+    box.textContent = 'Error: ' + err.message + '. Check your API key or try again.';
+    box.className = 'err-box on';
+  }
+}
+</script>
+</body>
+</html>
